@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>查看信息与统计分析</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"
+    />
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    
+    <!-- 引入 Leaflet (地图核心库) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- 引入 Leaflet MarkerCluster (点位聚合插件) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f0f2f5;
+        font-family: "Helvetica Neue", Helvetica, "PingFang SC",
+          "Microsoft YaHei", Arial, sans-serif;
+      }
+      #app {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+      }
+
+      /* 容器高度保持 620px */
+      .view-container {
+        width: 1200px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        height: 620px;
+      }
+
+      /* 头部 */
+      .dialog-header {
+        padding: 12px 20px;
+        border-bottom: 1px solid #ebeef5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: #303133;
+        flex-shrink: 0;
+      }
+      .close-btn {
+        cursor: pointer;
+        color: #909399;
+      }
+      .close-btn:hover {
+        color: #409eff;
+      }
+
+      /* Tabs */
+      .main-tabs {
+        padding: 0 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .el-tabs__header {
+        margin-bottom: 10px !important;
+        flex-shrink: 0;
+      }
+      .el-tabs__content {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .tab-scroll-pane {
+        height: 100%;
+        overflow-y: auto;
+        padding-right: 10px;
+        padding-bottom: 10px;
+        box-sizing: border-box;
+      }
+
+      /* Tab 1: 基本信息 */
+      .info-layout {
+        display: flex;
+        gap: 20px;
+        height: 100%;
+      }
+      .left-panel {
+        width: 35%;
+      }
+      .right-panel {
+        width: 65%;
+        display: flex;
+        flex-direction: column;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-left: 4px solid #409eff;
+        padding-left: 10px;
+      }
+      
+      /* 地图容器 */
+      #map-container {
+        flex: 1;
+        background-color: #f4f4f5;
+        border: 1px solid #dcdfe6;
+        border-radius: 4px;
+        min-height: 300px;
+        z-index: 1;
+      }
+
+      /* 通用表格样式微调 */
+      .table-container {
+        padding-top: 0px;
+      }
+      .pagination-wrapper {
+        margin-top: 10px;
+        text-align: right;
+        padding-bottom: 0px;
+      }
+
+      /* 统计头部栏样式 */
+      .stats-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 0 15px 0; 
+        margin-bottom: 0;
+      }
+      .stats-total {
+        font-weight: bold;
+        color: #303133;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+      }
+      /* 红色大号数据字体 */
+      .stats-num {
+        color: #f56c6c;
+        font-size: 24px;
+        font-weight: bold;
+        margin-left: 8px;
+        margin-right: 4px;
+        font-family: Arial, sans-serif;
+      }
+      
+      /* 分割线 */
+      .stats-divider {
+        margin: 0 15px;
+        color: #dcdfe6;
+      }
+
+      /* 备注样式 (粉色矩形框) */
+      .dev-note-box {
+        display: inline-block;
+        padding: 4px 10px;
+        border: 1px dashed #f78989; 
+        background-color: #fef0f0; 
+        color: #e91e63; 
+        font-size: 12px;
+        border-radius: 4px;
+      }
+
+      /* 弹窗左右布局样式 */
+      .detail-layout {
+        display: flex;
+        height: 400px; /* 固定高度确保布局对齐 */
+        gap: 20px;
+      }
+      .detail-left {
+        flex: 1; /* 左侧列表占据剩余空间 */
+        overflow: hidden; /* 防止表格撑破容器 */
+        display: flex;
+        flex-direction: column;
+      }
+      .detail-right {
+        width: 320px; /* 右侧饼图固定宽度 */
+        flex-shrink: 0;
+        border-left: 1px solid #eee;
+        padding-left: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .detail-chart {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ---------- 地图聚合与弹窗自定义样式 ---------- */
+      
+      .custom-cluster {
+        background-color: rgba(255, 165, 0, 0.6); 
+        border-radius: 50%;
+        text-align: center;
+        color: white;
+        font-weight: bold;
+      }
+      .custom-cluster div {
+        width: 30px;
+        height: 30px;
+        margin-left: 5px;
+        margin-top: 5px;
+        text-align: center;
+        border-radius: 50%;
+        font: 14px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        background-color: #d97706; 
+        line-height: 30px;
+        border: 2px solid #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      }
+      .custom-cluster-blue div {
+        background-color: #00bcd4;
+      }
+
+      /* 地图弹窗样式重置 */
+      .custom-dark-popup .leaflet-popup-content-wrapper {
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        border-radius: 0;
+      }
+      .custom-dark-popup .leaflet-popup-tip {
+        background: #00235b;
+      }
+      .custom-dark-popup .leaflet-popup-content {
+        margin: 0;
+        width: 500px !important;
+      }
+
+      /* 详情框内容布局 */
+      .event-detail-card {
+        background: linear-gradient(135deg, #001f4d 0%, #003366 100%);
+        border: 1px solid #1e4d8c;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        color: #fff;
+        display: flex;
+        font-family: "Microsoft YaHei", sans-serif;
+        overflow: hidden;
+        border-radius: 4px;
+      }
+      .event-info-left {
+        flex: 1;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #1e4d8c;
+      }
+      .info-row {
+        display: flex;
+        margin-bottom: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .info-row:last-child {
+        margin-bottom: 0;
+      }
+      .info-label {
+        width: 70px;
+        color: #a0cfff;
+        flex-shrink: 0;
+        text-align: right;
+        margin-right: 10px;
+        background: rgba(255,255,255,0.05);
+        padding: 2px 5px;
+        border-radius: 2px;
+      }
+      .info-value {
+        flex: 1;
+        color: #fff;
+      }
+      .event-img-right {
+        width: 180px;
+        background-color: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .event-img-right img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="view-container">
+        <!-- 头部 -->
+        <div class="dialog-header">
+          <span>查看</span>
+          <i class="el-icon-close close-btn" @click="closeWindow"></i>
+        </div>
+
+        <!-- Tab 切换 -->
+        <el-tabs v-model="activeTab" class="main-tabs" @tab-click="handleTabClick">
+          <!-- ================= TAB 1: 基本信息 ================= -->
+          <el-tab-pane label="基本信息" name="info" style="height: 100%">
+            <div class="tab-scroll-pane">
+              <div class="info-layout">
+                <div class="left-panel">
+                  <div class="section-title">基本信息</div>
+                  <el-form label-width="100px" size="mini">
+                    <el-form-item label="点位名称:" style="margin-bottom: 10px"
+                      >山东省青岛市胶州市九龙街道海外贸易商城西北约89米</el-form-item
+                    >
+                    <el-form-item label="所属街道:" style="margin-bottom: 10px"
+                      >九龙街道,阜安街道</el-form-item
+                    >
+                    <el-form-item label="所属网格:" style="margin-bottom: 10px"
+                      >网格45,网格46,网格47,网格48,网格49,网格70,网格71</el-form-item
+                    >
+                    <el-form-item label="所属道路:" style="margin-bottom: 10px"
+                      >胶州东路</el-form-item
+                    >
+
+                    <el-form-item
+                      label="上报事件数:"
+                      style="margin-bottom: 10px"
+                      >1189</el-form-item
+                    >
+                    <el-form-item
+                      label="有效事件数:"
+                      style="margin-bottom: 10px"
+                      >1184</el-form-item
+                    >
+                    <el-form-item
+                      label="统计时间范围:"
+                      style="margin-bottom: 10px"
+                    >
+                      2025-11-28 - 2025-12-04
+                    </el-form-item>
+                  </el-form>
+                </div>
+                <div class="right-panel">
+                  <div class="section-title">
+                    位置信息
+                    <span
+                      style="
+                        font-size: 12px;
+                        font-weight: normal;
+                        color: #666;
+                        margin-left: 10px;
+                      "
+                      >说明：以点位为中心，周边200m范围为事件发生区域。</span
+                    >
+                  </div>
+                  <div id="map-container"></div>
+                </div>
+              </div>
+            </div>
+          </el-tab-pane>
+
+          <!-- ================= TAB 2: 事件类型统计分析 ================= -->
+          <el-tab-pane
+            label="事件类型统计分析"
+            name="typeAnalysis"
+            style="height: 100%"
+          >
+            <div class="tab-scroll-pane">
+              <!-- 修改头部统计栏 -->
+              <div class="stats-header-bar">
+                <div class="stats-total">
+                  事件总数：<span class="stats-num">{{ typeTotalSum }}</span>
+                  <span class="stats-divider">|</span>
+                  有效事件总数：<span class="stats-num">{{ typeValidSum }}</span>
+                </div>
+                <!-- 修改备注文案 -->
+                <div class="dev-note-box">
+                  开发备注：有效事件数占比=有效事件数/有效事件总数，办结率=办结事件数/有效事件数
+                </div>
+              </div>
+
+              <div class="table-container">
+                <el-table
+                  :data="typeData"
+                  stripe
+                  border
+                  size="mini"
+                  style="width: 100%"
+                  :header-cell-style="{background:'#fafafa',color:'#333'}"
+                >
+                  <el-table-column
+                    prop="rank"
+                    label="排名"
+                    width="60"
+                    align="center"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="category"
+                    label="事件类别"
+                    min-width="150"
+                    show-overflow-tooltip
+                  ></el-table-column>
+
+                  <!-- 删除了 [事件总数] 和 [事件数占比] 列 -->
+
+                  <!-- 调整宽度以撑满表格 -->
+                  <el-table-column
+                    prop="valid"
+                    label="有效事件数"
+                    width="180"
+                    align="center"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="validRatio"
+                    label="有效事件数占比"
+                    min-width="150"
+                    align="center"
+                  >
+                    <template slot-scope="scope"
+                      >{{ scope.row.validRatio }}%</template
+                    >
+                  </el-table-column>
+                  <el-table-column
+                    prop="done"
+                    label="办结事件数"
+                    width="180"
+                    align="center"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="completionRate"
+                    label="办结率"
+                    min-width="150"
+                    align="center"
+                  >
+                    <template slot-scope="scope"
+                      >{{ scope.row.completionRate }}%</template
+                    >
+                  </el-table-column>
+                </el-table>
+              </div>
+            </div>
+          </el-tab-pane>
+
+          <!-- ================= TAB 3: 事件处置部门统计分析 ================= -->
+          <el-tab-pane
+            label="事件处置部门统计分析"
+            name="deptAnalysis"
+            style="height: 100%"
+          >
+            <div class="tab-scroll-pane">
+              <div class="stats-header-bar">
+                <div class="stats-total">
+                  处置事件总数：<span class="stats-num">{{ deptTotalSum }}</span>
+                </div>
+              </div>
+
+              <div class="table-container">
+                <el-table
+                  :data="pagedDeptData"
+                  stripe
+                  border
+                  size="mini"
+                  style="width: 100%"
+                  :header-cell-style="{background:'#fafafa',color:'#333'}"
+                >
+                  <el-table-column
+                    prop="rank"
+                    label="排名"
+                    width="60"
+                    align="center"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="orgName"
+                    label="机构名称"
+                    min-width="200"
+                    show-overflow-tooltip
+                  ></el-table-column>
+
+                  <el-table-column
+                    prop="eventCount"
+                    label="事件总数"
+                    width="180"
+                    align="center"
+                  ></el-table-column>
+
+                  <el-table-column
+                    prop="doneCount"
+                    label="办结事件数"
+                    width="180"
+                    align="center"
+                  ></el-table-column>
+                  <el-table-column
+                    prop="doneRate"
+                    label="办结率"
+                    width="180"
+                    align="center"
+                  >
+                    <template slot-scope="scope">
+                      <span>{{ scope.row.doneRate }}%</span>
+                    </template>
+                  </el-table-column>
+                  
+                  <el-table-column
+                    label="操作"
+                    width="100"
+                    align="center"
+                    fixed="right"
+                  >
+                    <template slot-scope="scope">
+                      <el-button type="text" size="small" @click="openDeptDetail(scope.row)">查看</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+
+                <div class="pagination-wrapper">
+                  <el-pagination
+                    small
+                    background
+                    layout="total, prev, pager, next"
+                    :current-page.sync="deptCurrentPage"
+                    :page-size="deptPageSize"
+                    :total="deptData.length"
+                  >
+                  </el-pagination>
+                </div>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+
+        <!-- 部门详情弹窗 -->
+        <el-dialog
+          :title="currentDeptName + ' - 事件类型统计'"
+          :visible.sync="detailDialogVisible"
+          width="900px"
+          append-to-body
+          @opened="initChart"
+        >
+          <div class="detail-layout">
+            <!-- 左侧列表 -->
+            <div class="detail-left">
+              <el-table
+                :data="currentDeptDetailData"
+                stripe
+                border
+                size="mini"
+                style="width: 100%; flex: 1;"
+                height="100%"
+                :header-cell-style="{background:'#fafafa',color:'#333'}"
+              >
+                <el-table-column prop="rank" label="排名" width="50" align="center"></el-table-column>
+                <el-table-column prop="category" label="事件类别" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="total" label="事件总数" width="100" align="center"></el-table-column>
+                
+                <el-table-column prop="done" label="办结事件数" width="100" align="center"></el-table-column>
+                <el-table-column prop="completionRate" label="办结率" width="90" align="center">
+                    <template slot-scope="scope">{{ scope.row.completionRate }}%</template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <!-- 右侧饼图 -->
+            <div class="detail-right">
+              <div id="deptPieChart" class="detail-chart"></div>
+            </div>
+          </div>
+
+          <span slot="footer" class="dialog-footer">
+            <el-button size="mini" @click="detailDialogVisible = false">关 闭</el-button>
+          </span>
+        </el-dialog>
+
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+    <script>
+      new Vue({
+        el: "#app",
+        data() {
+          return {
+            activeTab: "info",
+            map: null, 
+
+            // Tab 2 数据
+            typeCategories: [
+              "环境卫生", "市容秩序", "宣传广告", "施工管理",
+              "其他事件", "突发事件", "公用设施", "园林绿化",
+              "道路交通", "环境卫生设施", "广告亮化", "其他部件",
+            ],
+            typeData: [],
+            typeTotalSum: 0, 
+            typeValidSum: 0, // 新增：有效事件总数
+
+            // Tab 3 数据
+            deptCurrentPage: 1,
+            deptPageSize: 12,
+            deptRawList: [
+              "胶州市住建局-综合执法突击队", "胶州市住建局-环境卫生突击队", "胶州市住建局-环卫处",
+              "胶州市住建局-市政处", "胶州市住建局-园林处", "胶州市住建局-园林科",
+              "胶州市住建局-环卫科", "胶州市住建局-市政管护科", "胶州市住建局-市政工程科",
+              "胶州市住建局-排水科", "胶州市住建局-燃气科", "胶州市住建局-安全生产科",
+              "胶州市住建局-供热科", "胶州市住建局-地材科", "阜安办事处",
+              "中云办事处", "三里河办事处", "九龙办事处", "综合执法局",
+              "公安局", "临空控股", "经济技术开发区管委会", "发改局",
+              "人社局", "教体局", "卫健局", "民政局", "自然资源和规划局",
+            ],
+            deptData: [],
+            deptTotalSum: 0, 
+
+            // 部门详情弹窗数据
+            detailDialogVisible: false,
+            currentDeptName: '',
+            currentDeptTotal: 0,
+            currentDeptDetailData: [],
+            chartInstance: null
+          };
+        },
+        computed: {
+          pagedDeptData() {
+            const start = (this.deptCurrentPage - 1) * this.deptPageSize;
+            return this.deptData.slice(start, start + this.deptPageSize);
+          },
+        },
+        mounted() {
+          this.generateTypeData();
+          this.generateDeptData();
+          this.$nextTick(() => {
+            this.initMap();
+          });
+        },
+        methods: {
+          closeWindow() {
+            alert("关闭窗口");
+          },
+
+          handleTabClick(tab) {
+            if (tab.name === 'info' && this.map) {
+              this.$nextTick(() => {
+                this.map.invalidateSize();
+              });
+            }
+          },
+
+          // --- 地图功能 ---
+          initMap() {
+            const container = document.getElementById('map-container');
+            if (!container) return;
+
+            const centerPoint = [36.28, 120.00];
+            // 修改点：缩放级别 14 -> 17，以便清晰展示200m圆圈和内部点位
+            this.map = L.map('map-container').setView(centerPoint, 17);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(this.map);
+
+            // 200米红色圆圈
+            L.circle(centerPoint, {
+                color: '#e64a19',       
+                fillColor: '#ff5722',   
+                fillOpacity: 0.2,       
+                radius: 200             
+            }).addTo(this.map);
+
+            // 中心点标记
+            L.marker(centerPoint).addTo(this.map)
+              .bindPopup("当前点位：山东省青岛市胶州市九龙街道海外贸易商城西北约89米")
+              .openPopup();
+
+            const markers = L.markerClusterGroup({
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    let c = 'custom-cluster';
+                    if (count < 10) {
+                        c += ' custom-cluster-blue'; 
+                    }
+                    return L.divIcon({ 
+                        html: `<div>${count}</div>`, 
+                        className: c, 
+                        iconSize: L.point(40, 40) 
+                    });
+                },
+                zoomToBoundsOnClick: true,
+                spiderfyOnMaxZoom: true
+            });
+
+            const sources = ["网格上报", "巡查上报", "青岛派遣"];
+
+            for (let i = 0; i < 50; i++) {
+                // 修改点：缩小随机范围到 0.0035，确保点位落在200m圈内
+                const lat = 36.28 + (Math.random() - 0.5) * 0.0035;
+                const lng = 120.00 + (Math.random() - 0.5) * 0.0035;
+                const marker = L.marker([lat, lng]);
+
+                const eventId = "20251202" + Math.floor(Math.random() * 1000000000);
+                const eventSource = sources[Math.floor(Math.random() * sources.length)];
+
+                const popupContent = `
+                    <div class="event-detail-card">
+                        <div class="event-info-left">
+                            <div class="info-row">
+                                <span class="info-label">事件编号</span>
+                                <span class="info-value">${eventId}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">事件来源</span>
+                                <span class="info-value">${eventSource}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">事件描述</span>
+                                <span class="info-value">非法小广告，胶州东路与胶黄铁路桥交汇处，东北角，中医健康管理西边。</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">事件类型</span>
+                                <span class="info-value">宣传广告/非法小广告</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">事件位置</span>
+                                <span class="info-value">山东省青岛市胶州市九龙街道胶州东路462号铁路小区</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">所属网格</span>
+                                <span class="info-value">网格70</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">上报人</span>
+                                <span class="info-value">采集员70</span>
+                            </div>
+                        </div>
+                        <div class="event-img-right">
+                            <img src="https://picsum.photos/200/300?random=${i}" alt="现场图" />
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent, {
+                    className: 'custom-dark-popup',
+                    minWidth: 500,
+                    maxWidth: 500
+                });
+
+                markers.addLayer(marker);
+            }
+
+            this.map.addLayer(markers);
+          },
+
+          // --- 生成 Tab 2 数据 (已修改逻辑) ---
+          generateTypeData() {
+            let grandTotal = 0;
+            let grandValid = 0; // 用于计算有效事件总和
+            
+            // 第一次遍历：生成基础数据并计算总和
+            const rawData = this.typeCategories.map((name) => {
+              const total = Math.floor(Math.random() * 300) + 50;
+              const valid = Math.floor(total * (0.85 + Math.random() * 0.15));
+              const done = Math.floor(valid * (0.8 + Math.random() * 0.2));
+
+              grandTotal += total;
+              grandValid += valid;
+
+              return { category: name, total, valid, done };
+            });
+
+            this.typeTotalSum = grandTotal;
+            this.typeValidSum = grandValid; // 赋值给 Vue data
+
+            // 第二次遍历：计算占比
+            this.typeData = rawData.map((item) => ({
+              ...item,
+              // 已移除 totalRatio
+              // validRatio 逻辑修改：当前有效数 / 有效总数
+              validRatio: grandValid > 0 ? ((item.valid / grandValid) * 100).toFixed(2) : '0.00',
+              completionRate: item.valid > 0 ? ((item.done / item.valid) * 100).toFixed(2) : '0.00',
+            }));
+
+            // 保持按办结数排序
+            this.typeData.sort((a, b) => b.done - a.done);
+
+            this.typeData.forEach((item, index) => {
+              item.rank = index + 1;
+            });
+          },
+
+          // --- 生成 Tab 3 数据 ---
+          generateDeptData() {
+            let totalAllEvents = 0;
+
+            const temp = this.deptRawList.map((name) => {
+              const eventCount = Math.floor(Math.random() * 600) + 100;
+              const doneCount = Math.floor(
+                eventCount * (0.7 + Math.random() * 0.29)
+              );
+
+              totalAllEvents += eventCount;
+
+              return {
+                orgName: name,
+                eventCount: eventCount,
+                doneCount: doneCount,
+                doneRateVal: (doneCount / eventCount) * 100,
+              };
+            });
+
+            this.deptTotalSum = totalAllEvents;
+
+            this.deptData = temp.map((item) => ({
+              ...item,
+              doneRate: item.doneRateVal.toFixed(2),
+            }));
+
+            this.deptData.sort((a, b) => b.doneRateVal - a.doneRateVal);
+
+            this.deptData.forEach((item, index) => {
+              item.rank = index + 1;
+            });
+          },
+
+          // 打开部门详情
+          openDeptDetail(row) {
+            this.currentDeptName = row.orgName;
+            this.generateCurrentDeptDetail();
+            this.detailDialogVisible = true;
+          },
+
+          // 生成选中部门的详情数据
+          generateCurrentDeptDetail() {
+            let deptGrandTotal = 0;
+            const raw = this.typeCategories.map(cat => {
+                const total = Math.floor(Math.random() * 50);
+                deptGrandTotal += total;
+                const valid = Math.floor(total * 0.9);
+                const done = Math.floor(valid * 0.85);
+                return { category: cat, total, valid, done };
+            });
+
+            this.currentDeptTotal = deptGrandTotal;
+
+            this.currentDeptDetailData = raw.map(item => ({
+                ...item,
+                totalRatio: deptGrandTotal > 0 ? ((item.total / deptGrandTotal) * 100).toFixed(2) : '0.00',
+                completionRate: item.valid > 0 ? ((item.done / item.valid) * 100).toFixed(2) : '0.00'
+            })).sort((a,b) => b.total - a.total);
+
+            this.currentDeptDetailData.forEach((item, i) => item.rank = i + 1);
+          },
+
+          // 初始化饼图
+          initChart() {
+            if (this.chartInstance) {
+                this.chartInstance.dispose();
+            }
+            const chartDom = document.getElementById('deptPieChart');
+            if(!chartDom) return;
+            
+            this.chartInstance = echarts.init(chartDom);
+            
+            const pieData = this.currentDeptDetailData.map(item => ({
+                value: item.total,
+                name: item.category
+            }));
+
+            const option = {
+                title: {
+                    text: '{val|' + this.currentDeptTotal + '}\n{name|事件总数}',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: {
+                        rich: {
+                            val: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+                            name: { fontSize: 14, color: '#999', padding: [5,0,0,0] }
+                        }
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                legend: {
+                    show: false 
+                },
+                series: [
+                    {
+                        name: '事件分布',
+                        type: 'pie',
+                        radius: ['45%', '70%'],
+                        center: ['50%', '50%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 5,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false,
+                            position: 'center'
+                        },
+                        emphasis: {
+                            label: {
+                                show: false 
+                            }
+                        },
+                        data: pieData
+                    }
+                ]
+            };
+
+            this.chartInstance.setOption(option);
+          }
+        },
+      });
+    </script>
+  </body>
+</html>
