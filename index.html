@@ -156,6 +156,12 @@
         margin-right: 4px;
         font-family: Arial, sans-serif;
       }
+      
+      /* 分割线 */
+      .stats-divider {
+        margin: 0 15px;
+        color: #dcdfe6;
+      }
 
       /* 备注样式 (粉色矩形框) */
       .dev-note-box {
@@ -365,12 +371,16 @@
             style="height: 100%"
           >
             <div class="tab-scroll-pane">
+              <!-- 修改头部统计栏 -->
               <div class="stats-header-bar">
                 <div class="stats-total">
                   事件总数：<span class="stats-num">{{ typeTotalSum }}</span>
+                  <span class="stats-divider">|</span>
+                  有效事件总数：<span class="stats-num">{{ typeValidSum }}</span>
                 </div>
+                <!-- 修改备注文案 -->
                 <div class="dev-note-box">
-                  备注：有效事件数占比=有效事件数/事件总数，办结率=办结事件数/有效事件数
+                  开发备注：有效事件数占比=有效事件数/有效事件总数，办结率=办结事件数/有效事件数
                 </div>
               </div>
 
@@ -392,36 +402,23 @@
                   <el-table-column
                     prop="category"
                     label="事件类别"
-                    min-width="200"
+                    min-width="150"
                     show-overflow-tooltip
                   ></el-table-column>
 
-                  <el-table-column
-                    prop="total"
-                    label="事件总数"
-                    width="130"
-                    align="center"
-                  ></el-table-column>
-                  <el-table-column
-                    prop="totalRatio"
-                    label="事件数占比"
-                    width="130"
-                    align="center"
-                  >
-                    <template slot-scope="scope"
-                      >{{ scope.row.totalRatio }}%</template
-                    >
-                  </el-table-column>
+                  <!-- 删除了 [事件总数] 和 [事件数占比] 列 -->
+
+                  <!-- 调整宽度以撑满表格 -->
                   <el-table-column
                     prop="valid"
                     label="有效事件数"
-                    width="130"
+                    width="180"
                     align="center"
                   ></el-table-column>
                   <el-table-column
                     prop="validRatio"
                     label="有效事件数占比"
-                    width="150"
+                    min-width="150"
                     align="center"
                   >
                     <template slot-scope="scope"
@@ -431,13 +428,13 @@
                   <el-table-column
                     prop="done"
                     label="办结事件数"
-                    width="130"
+                    width="180"
                     align="center"
                   ></el-table-column>
                   <el-table-column
                     prop="completionRate"
                     label="办结率"
-                    width="150"
+                    min-width="150"
                     align="center"
                   >
                     <template slot-scope="scope"
@@ -600,6 +597,7 @@
             ],
             typeData: [],
             typeTotalSum: 0, 
+            typeValidSum: 0, // 新增：有效事件总数
 
             // Tab 3 数据
             deptCurrentPage: 1,
@@ -755,11 +753,12 @@
             this.map.addLayer(markers);
           },
 
-          // --- 生成 Tab 2 数据 ---
+          // --- 生成 Tab 2 数据 (已修改逻辑) ---
           generateTypeData() {
             let grandTotal = 0;
-            let grandValid = 0;
+            let grandValid = 0; // 用于计算有效事件总和
             
+            // 第一次遍历：生成基础数据并计算总和
             const rawData = this.typeCategories.map((name) => {
               const total = Math.floor(Math.random() * 300) + 50;
               const valid = Math.floor(total * (0.85 + Math.random() * 0.15));
@@ -772,14 +771,18 @@
             });
 
             this.typeTotalSum = grandTotal;
+            this.typeValidSum = grandValid; // 赋值给 Vue data
 
+            // 第二次遍历：计算占比
             this.typeData = rawData.map((item) => ({
               ...item,
-              totalRatio: ((item.total / grandTotal) * 100).toFixed(2),
-              validRatio: item.total > 0 ? ((item.valid / item.total) * 100).toFixed(2) : '0.00',
+              // 已移除 totalRatio
+              // validRatio 逻辑修改：当前有效数 / 有效总数
+              validRatio: grandValid > 0 ? ((item.valid / grandValid) * 100).toFixed(2) : '0.00',
               completionRate: item.valid > 0 ? ((item.done / item.valid) * 100).toFixed(2) : '0.00',
             }));
 
+            // 保持按办结数排序
             this.typeData.sort((a, b) => b.done - a.done);
 
             this.typeData.forEach((item, index) => {
