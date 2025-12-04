@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>智慧桥梁监测系统</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #1890ff;
+        --secondary-color: #52c41a; /* 绿色，用于确认 */
+        --warning-color: #faad14; /* 橙色，用于处置 */
+        --danger-color: #ff4d4f; /* 红色，用于上报 */
+        --bg-color: #f5f7fa;
+        --white: #ffffff;
+        --text-main: #333333;
+        --text-sub: #888888;
+        --nav-height: 44px;
+        --status-bar-height: 20px;
+        --bottom-nav-height: 60px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* --- 顶部区域 --- */
+      .top-fixed-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        background-color: transparent; /* 首页顶部通常为了图片效果可以透明，这里为了统一风格设为白色或半透明 */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+      }
+
+      .status-bar {
+        height: var(--status-bar-height);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 15px;
+        font-size: 12px;
+        color: #000;
+        font-weight: 600;
+      }
+
+      .top-nav {
+        height: var(--nav-height);
+        display: flex;
+        align-items: center;
+        justify-content: center; /* 首页标题居中 */
+        position: relative;
+      }
+
+      .nav-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-main);
+      }
+
+      /* --- 主内容区域 --- */
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding-top: calc(var(--status-bar-height) + var(--nav-height));
+        padding-bottom: var(--bottom-nav-height);
+        overflow-y: auto;
+      }
+
+      /* 1/4 屏幕高度的图片区域 */
+      .hero-section {
+        height: 25vh; /* 占据视口高度的 25% */
+        width: 100%;
+        position: relative;
+        background-color: #ddd;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .hero-section img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+        color: white;
+      }
+
+      .hero-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .hero-subtitle {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      /* 功能菜单区域 */
+      .menu-container {
+        padding: 20px;
+        background-color: var(--bg-color);
+      }
+
+      .section-header {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: var(--text-main);
+        padding-left: 10px;
+        border-left: 4px solid var(--primary-color);
+      }
+
+      /* Grid 布局 */
+      .grid-menu {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+
+      .menu-item {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 20px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        text-decoration: none; /* 去除链接下划线 */
+      }
+
+      .menu-item:active {
+        transform: scale(0.96);
+        background-color: #fafafa;
+      }
+
+      .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        font-size: 20px;
+        color: white;
+      }
+
+      /* 不同功能的颜色 */
+      .icon-box.report {
+        background: linear-gradient(135deg, #ff7875, var(--danger-color));
+        box-shadow: 0 4px 10px rgba(255, 77, 79, 0.3);
+      }
+
+      .icon-box.confirm {
+        background: linear-gradient(135deg, #40a9ff, var(--primary-color));
+        box-shadow: 0 4px 10px rgba(24, 144, 255, 0.3);
+      }
+
+      .icon-box.handle {
+        background: linear-gradient(135deg, #95de64, var(--secondary-color));
+        box-shadow: 0 4px 10px rgba(82, 196, 26, 0.3);
+      }
+
+      .menu-text {
+        font-size: 13px;
+        color: var(--text-main);
+        font-weight: 500;
+      }
+
+      /* --- 底部导航栏 --- */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: var(--bottom-nav-height);
+        background: var(--white);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        border-top: 1px solid #eeeeee;
+        z-index: 100;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #ccc; /* 未选中颜色 */
+        text-decoration: none;
+        font-size: 11px;
+        flex: 1;
+        height: 100%;
+      }
+
+      .nav-item.active {
+        color: var(--primary-color);
+      }
+
+      .nav-item i {
+        font-size: 22px;
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 顶部固定区域 -->
+    <div class="top-fixed-container">
+      <!-- 状态栏 -->
+      <div class="status-bar">
+        <div class="time">13:40</div>
+        <div class="icons">
+          <i class="fas fa-signal"></i>
+          <i class="fas fa-wifi" style="margin: 0 5px"></i>
+          <i class="fas fa-battery-three-quarters"></i>
+        </div>
+      </div>
+      <!-- 导航栏 -->
+      <div class="top-nav">
+        <div class="nav-title">首页</div>
+      </div>
+    </div>
+
+    <!-- 主内容 -->
+    <div class="main-content">
+      <!-- 1/4 高度的桥梁照片 -->
+      <div class="hero-section">
+        <!-- 这里使用了一张 Unsplash 的桥梁占位图 -->
+        <img
+          src="https://images.unsplash.com/photo-1545558014-8692077e9b5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+          alt="大桥监控"
+        />
+        <div class="hero-overlay">
+          <div class="hero-title">长江大桥南段监测点</div>
+          <div class="hero-subtitle">系统运行正常 | 设备在线率 98%</div>
+        </div>
+      </div>
+
+      <!-- 功能入口 -->
+      <div class="menu-container">
+        <div class="section-header">日常作业</div>
+
+        <div class="grid-menu">
+          <!-- 1. 报警上报 (点击跳转) -->
+          <!-- 注意：href 指向你上一段代码保存的文件名，假设为 alarm_report.html -->
+          <a href="alarm_report.html" class="menu-item">
+            <div class="icon-box report">
+              <i class="fas fa-bell"></i>
+            </div>
+            <span class="menu-text">报警上报</span>
+          </a>
+
+          <!-- 2. 报警确认 (点击跳转到 alarm_list.html) -->
+          <a href="alarm_list.html" class="menu-item">
+            <div class="icon-box confirm">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <span class="menu-text">报警确认</span>
+          </a>
+          <!-- 3. 报警处置 (修改跳转链接) -->
+          <a href="alarm_handle_list.html" class="menu-item">
+            <div class="icon-box handle">
+              <i class="fas fa-tools"></i>
+            </div>
+            <span class="menu-text">报警处置</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 这是一个占位区域，模拟首页下方还有其他内容 -->
+      <div class="menu-container" style="padding-top: 0">
+        <div class="section-header">最新动态</div>
+        <div
+          style="
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+          "
+        >
+          <p>
+            <i class="fas fa-info-circle" style="color: #1890ff"></i> 2023-10-27
+            10:00: 系统完成了例行巡检。
+          </p>
+          <div style="border-bottom: 1px solid #eee; margin: 10px 0"></div>
+          <p>
+            <i class="fas fa-info-circle" style="color: #1890ff"></i> 2023-10-26
+            14:30: 3号传感器数据已校准。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+      <!-- 首页高亮 -->
+      <a href="#" class="nav-item active">
+        <i class="fas fa-home"></i>
+        <span>首页</span>
+      </a>
+      <a href="#" class="nav-item">
+        <i class="fas fa-clipboard-list"></i>
+        <span>待办</span>
+      </a>
+      <a href="#" class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>个人中心</span>
+      </a>
+    </div>
+  </body>
+</html>

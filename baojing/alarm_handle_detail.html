@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>报警处置详情</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #1890ff;
+        --bg-color: #f5f7fa;
+        --white: #ffffff;
+        --text-main: #333333;
+        --text-sub: #888888;
+        --border-color: #eeeeee;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        padding-top: 108px;
+        padding-bottom: 80px;
+      }
+
+      .fixed-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        background-color: var(--primary-color);
+        color: white;
+      }
+      .status-bar {
+        height: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 15px;
+        font-size: 12px;
+      }
+      .top-nav {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+      }
+      .nav-title {
+        font-size: 17px;
+        font-weight: 500;
+      }
+
+      .page-tabs {
+        height: 44px;
+        background: var(--white);
+        display: flex;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border-color);
+      }
+      .page-tab-item {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        position: relative;
+        cursor: pointer;
+      }
+      .page-tab-item.active {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+      .page-tab-item.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        width: 50%;
+        height: 2px;
+        background-color: var(--primary-color);
+      }
+
+      .content-section {
+        display: none;
+        padding: 15px;
+      }
+      .content-section.active {
+        display: block;
+      }
+      .form-group {
+        background: var(--white);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+      }
+      .group-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .form-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        font-size: 14px;
+      }
+      .form-label {
+        width: 80px;
+        color: var(--text-main);
+        flex-shrink: 0;
+      }
+      .required {
+        color: red;
+        margin-left: 2px;
+      }
+      .form-content {
+        flex: 1;
+      }
+
+      .input-box {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        padding: 0 10px;
+        font-size: 13px;
+        outline: none;
+      }
+      .textarea-box {
+        width: 100%;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        padding: 10px;
+        font-size: 13px;
+        min-height: 100px;
+        resize: none;
+        background: #fcfcfc;
+      }
+
+      .bottom-action {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--white);
+        padding: 10px 15px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+      }
+      .submit-btn {
+        width: 100%;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        height: 44px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .submit-btn:disabled {
+        background: #ccc;
+      }
+
+      /* 详情只读展示 */
+      .detail-row {
+        display: flex;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+      .detail-label {
+        color: var(--text-sub);
+        width: 100px;
+      }
+      .detail-val {
+        color: var(--text-main);
+        flex: 1;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="fixed-header">
+      <div class="status-bar">
+        <div>14:30</div>
+        <div>
+          <i class="fas fa-signal"></i> <i class="fas fa-wifi"></i>
+          <i class="fas fa-battery-full"></i>
+        </div>
+      </div>
+      <div class="top-nav">
+        <div
+          class="nav-left"
+          onclick="window.location.href='alarm_handle_list.html'"
+        >
+          <i class="fas fa-chevron-left"></i>
+        </div>
+        <div class="nav-title">报警处置</div>
+        <div class="nav-right"></div>
+      </div>
+      <div class="page-tabs">
+        <div class="page-tab-item active" onclick="switchPageTab(0)">
+          处置信息
+        </div>
+        <div class="page-tab-item" onclick="switchPageTab(1)">报警信息</div>
+      </div>
+    </div>
+
+    <!-- Tab 1: 处置信息 + 确认信息(只读) -->
+    <div class="content-section active" id="tab-handle">
+      <!-- 1. 处置信息表单 (待处置时可填) -->
+      <div class="form-group">
+        <div class="group-title">处置信息</div>
+        <div class="form-row">
+          <div class="form-label">处置人<span class="required">*</span></div>
+          <div class="form-content">
+            <input
+              type="text"
+              class="input-box"
+              id="h-man"
+              placeholder="请输入处置人"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">处置时间<span class="required">*</span></div>
+          <div class="form-content">
+            <input type="datetime-local" class="input-box" id="h-time" />
+          </div>
+        </div>
+        <div class="form-row" style="align-items: flex-start">
+          <div class="form-label" style="margin-top: 8px">
+            处置内容<span class="required">*</span>
+          </div>
+          <div class="form-content">
+            <textarea
+              class="textarea-box"
+              id="h-content"
+              placeholder="请输入处置内容"
+            ></textarea>
+            <div style="text-align: right; color: #ccc; font-size: 12px">
+              已输入0/200
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 确认信息 (只读，展示之前流程填写的排查信息等) -->
+      <div class="form-group">
+        <div class="group-title">确认信息</div>
+        <div class="detail-row">
+          <div class="detail-label">报警确认</div>
+          <div class="detail-val">处置报警</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">生成工单</div>
+          <div class="detail-val">否</div>
+        </div>
+        <!-- 排查信息从列表页带过来 -->
+        <div
+          class="detail-row"
+          style="flex-direction: column; align-items: flex-start"
+        >
+          <div class="detail-label" style="margin-bottom: 5px">排查信息</div>
+          <div
+            class="detail-val"
+            id="d-check-info"
+            style="
+              text-align: left;
+              color: #666;
+              width: 100%;
+              background: #f9f9f9;
+              padding: 8px;
+              border-radius: 4px;
+            "
+          >
+            --
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 报警信息 (只读) -->
+    <div class="content-section" id="tab-info">
+      <div class="form-group">
+        <div class="group-title">基础信息</div>
+        <div class="detail-row">
+          <div class="detail-label">结构物类型</div>
+          <div class="detail-val" id="d-stype">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">结构物名称</div>
+          <div class="detail-val" id="d-sname">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">设备类型</div>
+          <div class="detail-val" id="d-dtype">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">设备名称</div>
+          <div class="detail-val" id="d-dname">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">测点类型</div>
+          <div class="detail-val" id="d-ptype">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">测点名称</div>
+          <div class="detail-val" id="d-pname">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">报警级别</div>
+          <div class="detail-val" id="d-level" style="font-weight: bold">
+            --
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">报警内容</div>
+          <div class="detail-val" id="d-title">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">报警值</div>
+          <div class="detail-val" id="d-val">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">正常范围</div>
+          <div class="detail-val" id="d-range">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">报警开始时间</div>
+          <div class="detail-val" id="d-time">--</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">报警来源</div>
+          <div class="detail-val" id="d-source">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-action">
+      <button class="submit-btn" id="submit-btn">提交</button>
+    </div>
+
+    <script>
+      function switchPageTab(index) {
+        document
+          .querySelectorAll(".page-tab-item")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".content-section")
+          .forEach((s) => s.classList.remove("active"));
+        document
+          .querySelectorAll(".page-tab-item")
+          [index].classList.add("active");
+        document
+          .querySelectorAll(".content-section")
+          [index].classList.add("active");
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // 读取列表页传来的数据 (Handle阶段数据)
+        const dataStr = sessionStorage.getItem("handleAlarm");
+        if (dataStr) {
+          const data = JSON.parse(dataStr);
+
+          // 1. 填充排查信息
+          document.getElementById("d-check-info").innerText =
+            data.checkInfo || "暂无排查信息";
+
+          // 2. 填充报警信息
+          document.getElementById("d-stype").innerText = data.stype;
+          document.getElementById("d-sname").innerText = data.sname;
+          document.getElementById("d-dtype").innerText = data.dtype;
+          document.getElementById("d-dname").innerText = data.dname;
+          document.getElementById("d-ptype").innerText = data.ptype;
+          document.getElementById("d-pname").innerText = data.pname;
+
+          const levelEl = document.getElementById("d-level");
+          levelEl.innerText = data.level;
+          levelEl.style.color = data.levelColor || "#333";
+
+          document.getElementById("d-title").innerText = data.title;
+          document.getElementById("d-val").innerText = data.val;
+          document.getElementById("d-range").innerText = data.range;
+          document.getElementById("d-time").innerText = data.time;
+          document.getElementById("d-source").innerText = data.source;
+
+          // 3. 判断是否已处置
+          if (data.status === "handled") {
+            // 填充表单
+            document.getElementById("h-man").value = "李四";
+            document.getElementById("h-time").value = "2023-10-27T14:30"; // 模拟时间
+            document.getElementById("h-content").value =
+              data.handleInfo || "已按规定流程处置完毕。";
+
+            // 禁用编辑
+            document.getElementById("h-man").disabled = true;
+            document.getElementById("h-time").disabled = true;
+            document.getElementById("h-content").disabled = true;
+
+            document.getElementById("submit-btn").innerText = "已提交";
+            document.getElementById("submit-btn").disabled = true;
+            document.getElementById("submit-btn").style.background = "#ccc";
+          } else {
+            // 初始化时间
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById("h-time").value = now
+              .toISOString()
+              .slice(0, 16);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
