@@ -1,0 +1,5 @@
+{
+  "name": "专家库管理系统",
+  "description": "基于TDesign设计风格的专家全生命周期管理平台，包含专家申报、多级审核、审核记录及专家台账模块。",
+  "requestFramePermissions": []
+}
